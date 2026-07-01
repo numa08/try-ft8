@@ -9,6 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "tunnel": "bash scripts/serve-tunnel.sh",
+    "demo": "pnpm build && bash scripts/serve-tunnel.sh",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "format": "prettier --check .",

@@ -1,16 +1,34 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { encode, decode } from '../../src/audio/ft8'
+import { encode, decode, FT8_READY, SAMPLE_RATE } from '../../src/audio/ft8'
 
 // AC-11(HARNESS): FT8 音声のエンコード/デコード検証。
-// SPEC 6章に従い (a) 往復テスト と (b) ゴールデン音声デコードで確認する。
-// WASM(ft8_lib 由来)を同梱するまではハーネス未整備のため skip。実装完了時に有効化する。
-// 握りつぶしではなく「治具待ち」を明示し、トレーサビリティに残す。
-describe.skip('FT8 encode/decode 往復 (AC-11 / 治具待ち: WASM 同梱後に有効化)', () => {
-  it('エンコードしたメッセージを再デコードすると復元される', () => {
-    const samples = encode('CQ DE ABC', 1000)
-    const decoded = decode(samples)
+// ft8_lib 由来 WASM の encode↔decode 往復で送信テキストが復元されることを確認する(SPEC 6章)。
+// WASM を Node で読み込むため @vitest-environment node を指定。
+describe('FT8 encode/decode 往復 (AC-11)', () => {
+  it('ft8_lib WASM が同梱されている', () => {
+    expect(FT8_READY).toBe(true)
+    expect(SAMPLE_RATE).toBe(12_000)
+  })
+
+  it('エンコードしたメッセージを再デコードすると復元される', async () => {
+    const samples = await encode('CQ DE ABC', 1000)
+    const decoded = await decode(samples)
     expect(decoded.map((d) => d.text)).toContain('CQ DE ABC')
   })
 
-  it.todo('ゴールデン .wav (test/fixtures/*.wav) をデコードして期待テキストに一致する')
+  it('QSO で使う各メッセージが往復する', async () => {
+    for (const text of ['ABC DE XYZ', 'ABC DE XYZ 73', 'QQQ DE M8N']) {
+      const decoded = await decode(await encode(text, 1500))
+      expect(decoded.map((d) => d.text)).toContain(text)
+    }
+  })
+
+  it('デコード結果に送信周波数が復元される (AC-18 用)', async () => {
+    const decoded = await decode(await encode('CQ DE ABC', 700))
+    const hit = decoded.find((d) => d.text === 'CQ DE ABC')
+    expect(hit).toBeDefined()
+    expect(hit?.offsetHz ?? 0).toBeGreaterThan(650)
+    expect(hit?.offsetHz ?? 0).toBeLessThan(750)
+  })
 })

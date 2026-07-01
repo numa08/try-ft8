@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config'
 // クロスオリジン隔離ヘッダを dev サーバに付与しておく（本番は Pages 側で設定）。
 export default defineConfig({
   server: {
+    // dev サーバを Cloudflare クイックトンネルで公開して実機確認できるようにする。
+    allowedHosts: ['.trycloudflare.com'],
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',

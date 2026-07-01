@@ -1,5 +1,7 @@
 dist
 node_modules
+# emscripten 生成物と C シム(整形対象外)
+src/audio/wasm
 # SPEC は凍結ドキュメントのため整形対象外
 docs/SPEC.md
 pnpm-lock.yaml

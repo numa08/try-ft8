@@ -1,4 +1,5 @@
-import { notImplemented } from '../util/notImplemented'
+import { callMessage, cqMessage, parseMessage, seventyThreeMessage } from './message'
+import type { ParsedMessage } from './message'
 import type { SlotParity } from './slot'
 
 /**
@@ -51,6 +52,148 @@ export interface QsoMachine {
   dispatch(event: QsoEvent): QsoAction[]
 }
 
+interface Answer {
+  from: string
+  offsetHz: number
+}
+
 export function createQsoMachine(config: QsoConfig): QsoMachine {
-  return notImplemented('createQsoMachine', config)
+  const me = config.me
+  const maxResends = config.maxResends ?? 3
+
+  let state: QsoState = { kind: 'idle', resends: 0 }
+  // 現フェーズで送信した回数。初回 + maxResends 回まで送り、それを超えたら待機へ。
+  let phaseTx = 0
+  // AC-18: 自局 CQ への複数応答を集め、次の送信機会に最小オフセット局を選ぶ。
+  let answers: Answer[] = []
+
+  function makeState(kind: QsoStateKind, peer?: string): QsoState {
+    const resends = Math.max(0, phaseTx - 1)
+    return peer === undefined ? { kind, resends } : { kind, peer, resends }
+  }
+
+  function addressedToMe(msg: ParsedMessage): boolean {
+    return !msg.isCq && msg.to === me
+  }
+
+  function handleDecode(msg: ParsedMessage, offsetHz: number): QsoAction[] {
+    switch (state.kind) {
+      case 'idle':
+        // AC-16 / AC-17: 他局 CQ に応答開始。ただし既交信の相手は無視。
+        if (msg.isCq && !config.isKnown(msg.from)) {
+          phaseTx = 0
+          state = makeState('resp_replying', msg.from)
+        }
+        return []
+      case 'cq_calling':
+        // AC-18: 自局 CQ への応答 `me DE X` を集める。
+        if (addressedToMe(msg) && !msg.is73) {
+          answers.push({ from: msg.from, offsetHz })
+        }
+        return []
+      case 'cq_answering':
+        // AC-29: 相手の `me DE peer 73` を受信 → 双方 73 で完了。
+        if (addressedToMe(msg) && msg.is73 && msg.from === state.peer) {
+          const peer = msg.from
+          state = { kind: 'done', peer, resends: 0 }
+          return [{ type: 'completed', peer }]
+        }
+        return []
+      case 'resp_replying':
+        // AC-28: 相手(発信局)の `me DE peer 73` を受信 → 次 ODD で自局 73。
+        if (addressedToMe(msg) && msg.is73 && msg.from === state.peer) {
+          phaseTx = 0
+          state = makeState('resp_finishing', state.peer)
+        }
+        return []
+      default:
+        return []
+    }
+  }
+
+  function giveUp(): QsoAction[] {
+    phaseTx = 0
+    answers = []
+    state = makeState('idle')
+    return [{ type: 'waiting' }]
+  }
+
+  function handleSlot(parity: SlotParity): QsoAction[] {
+    switch (state.kind) {
+      case 'cq_calling': {
+        if (parity !== 'even') return [] // AC-8: CQ は EVEN のみ
+        if (answers.length > 0) {
+          // AC-18: 最小オフセットの応答局にのみ応答し、AC-27: 73 を送る。
+          const chosen = answers.reduce((lowest, a) => (a.offsetHz < lowest.offsetHz ? a : lowest))
+          answers = []
+          phaseTx = 1
+          state = makeState('cq_answering', chosen.from)
+          return [{ type: 'transmit', text: seventyThreeMessage(chosen.from, me) }]
+        }
+        // AC-14 / AC-15: 応答無しなら最大 3 回 CQ 再送、その後待機。
+        if (phaseTx <= maxResends) {
+          phaseTx++
+          state = makeState('cq_calling')
+          return [{ type: 'transmit', text: cqMessage(me) }]
+        }
+        return giveUp()
+      }
+      case 'cq_answering': {
+        if (parity !== 'even') return []
+        const peer = state.peer
+        if (peer !== undefined && phaseTx <= maxResends) {
+          phaseTx++
+          return [{ type: 'transmit', text: seventyThreeMessage(peer, me) }]
+        }
+        return giveUp()
+      }
+      case 'resp_replying': {
+        if (parity !== 'odd') return [] // AC-9: 応答は ODD のみ
+        const peer = state.peer
+        // AC-26 / AC-19 / AC-20: 初回 `peer DE me`、返信無しは最大 3 回再送、その後待機。
+        if (peer !== undefined && phaseTx <= maxResends) {
+          phaseTx++
+          return [{ type: 'transmit', text: callMessage(peer, me) }]
+        }
+        return giveUp()
+      }
+      case 'resp_finishing': {
+        if (parity !== 'odd') return []
+        const peer = state.peer
+        if (peer === undefined) return giveUp()
+        // AC-28 / AC-29: 自局 73 を送出 → 双方 73 で完了。
+        state = { kind: 'done', peer, resends: 0 }
+        return [
+          { type: 'transmit', text: seventyThreeMessage(peer, me) },
+          { type: 'completed', peer },
+        ]
+      }
+      default:
+        return []
+    }
+  }
+
+  return {
+    get state() {
+      return state
+    },
+    dispatch(event) {
+      switch (event.type) {
+        case 'start_sequence':
+          // AC-12 / AC-13: idle からのみ CQ シーケンスを開始し、応答待ち状態へ。
+          if (state.kind !== 'idle') return []
+          phaseTx = 0
+          answers = []
+          state = makeState('cq_calling')
+          return []
+        case 'decode': {
+          const msg = parseMessage(event.text)
+          if (!msg) return []
+          return handleDecode(msg, event.offsetHz)
+        }
+        case 'slot':
+          return handleSlot(event.parity)
+      }
+    },
+  }
 }

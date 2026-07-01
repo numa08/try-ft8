@@ -3,7 +3,17 @@ import tseslint from 'typescript-eslint'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'playwright-report', 'test-results', 'coverage'] },
+  // src/audio/wasm は emscripten 生成物と C シムのため lint 対象外。
+  {
+    ignores: [
+      'dist',
+      'node_modules',
+      'playwright-report',
+      'test-results',
+      'coverage',
+      'src/audio/wasm',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   prettier,

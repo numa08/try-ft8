@@ -20,15 +20,37 @@ pnpm exec playwright install chromium   # e2e 用(初回のみ)
 
 ## スクリプト
 
-| コマンド          | 用途                   |
-| ----------------- | ---------------------- |
-| `pnpm dev`        | 開発サーバ             |
-| `pnpm build`      | 本番ビルド             |
-| `pnpm test`       | 単体テスト(Vitest)     |
-| `pnpm test:e2e`   | e2e テスト(Playwright) |
-| `pnpm lint`       | ESLint                 |
-| `pnpm type-check` | 型チェック(tsc)        |
-| `pnpm format`     | Prettier チェック      |
+| コマンド          | 用途                              |
+| ----------------- | --------------------------------- |
+| `pnpm dev`        | 開発サーバ                        |
+| `pnpm build`      | 本番ビルド                        |
+| `pnpm test`       | 単体テスト(Vitest)                |
+| `pnpm test:e2e`   | e2e テスト(Playwright)            |
+| `pnpm lint`       | ESLint                            |
+| `pnpm type-check` | 型チェック(tsc)                   |
+| `pnpm format`     | Prettier チェック                 |
+| `pnpm demo`       | ビルド → 実機テスト用トンネル公開 |
+
+## 実機テスト(スマホ・複数台)
+
+マイクは HTTPS でしか使えないため、Cloudflare クイックトンネルで一時 URL を発行して実機確認する。
+
+```sh
+pnpm demo   # = pnpm build && bash scripts/serve-tunnel.sh
+```
+
+表示される `https://<ランダム>.trycloudflare.com` を複数台のスマホで開き、各自 3 文字名を入力・
+マイクを許可 → 端末を近づけて FT8 交信を試す(スピーカー音を相手のマイクが拾ってデコードする)。
+`cloudflared` が必要(https://github.com/cloudflare/cloudflared)。
+
+## FT8 WASM の再生成
+
+`src/audio/wasm/ft8.{mjs,wasm}` は ft8_lib(MIT)を Emscripten で WASM 化した生成物。
+再生成は Docker が必要:
+
+```sh
+bash scripts/build-ft8-wasm.sh
+```
 
 ## 設計方針
 
