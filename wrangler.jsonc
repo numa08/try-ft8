@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ft8-web",
+  "compatibility_date": "2026-07-01",
+  // 独自ドメイン(numa08.dev ゾーン内)。custom_domain で DNS + 証明書を自動プロビジョニング。
+  "routes": [{ "pattern": "ft8.numa08.dev", "custom_domain": true }],
+  // 純静的 SPA を Worker の Static Assets で配信(Pages ではなく Workers)。
+  // Cloudflare エッジ配信なので Date ヘッダはエッジ(NTP同期)時刻になり、時刻同期に好都合。
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+  },
+  "observability": {
+    "enabled": true,
+  },
+}

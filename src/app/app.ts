@@ -240,7 +240,7 @@ export function createApp(
         'div',
         { className: 'brand' },
         h('span', { className: 'brand-dot' }),
-        h('span', { className: 'brand-name', textContent: 'FT8' }),
+        h('span', { className: 'brand-name', textContent: 'Try! FT8' }),
         h('span', { className: 'brand-sub mono', textContent: 'ACOUSTIC LINK' }),
       ),
       pill,

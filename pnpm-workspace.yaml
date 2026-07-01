@@ -1,0 +1,5 @@
+# pnpm v11: wrangler が使う workerd / esbuild などのネイティブ postinstall を許可する。
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true

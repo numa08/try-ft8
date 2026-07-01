@@ -1,15 +1,19 @@
-# ft8-demo-on-web
+# Try! FT8
 
-ブラウザ上で動作する FT8 名刺交換デモ(WSJT-X 簡易版)。LT 用に、参加者がスマホで 3 文字ハンドルネームを
-音声(FT8 フリーテキスト)で交換し合う。仕様は [docs/SPEC.md](docs/SPEC.md) を参照。
+ブラウザだけで動く FT8 名刺交換デモ(WSJT-X 簡易版)。スマホのマイクとスピーカーで、3 文字ハンドルネームを
+FT8 の音として送受信して交換する。
+
+- 公開URL: **https://ft8.numa08.dev**
+- 仕様: [docs/SPEC.md](docs/SPEC.md) / 受入テスト設計: [docs/ACCEPTANCE_TESTS.md](docs/ACCEPTANCE_TESTS.md)
 
 ## 技術スタック
 
 - ビルド: Vite + TypeScript
 - 音声: Web Audio API / FT8 エンコード・デコードは WASM(ft8_lib 由来、フリーテキストモード)
-- 永続化: LocalStorage
+- 時刻: 起動時に `Date` ヘッダで秒境界を検出し `performance.now` 基準で補正(端末間の時計ズレ対策)
+- 永続化: LocalStorage(交信ログ・ユーザー名)
 - テスト: Vitest(単体, jsdom)/ Playwright(e2e)
-- デプロイ: Cloudflare Pages(HTTPS 必須)
+- デプロイ: Cloudflare Workers(Static Assets)+ 独自ドメイン(ft8.numa08.dev)
 
 ## セットアップ
 
@@ -20,16 +24,17 @@ pnpm exec playwright install chromium   # e2e 用(初回のみ)
 
 ## スクリプト
 
-| コマンド          | 用途                              |
-| ----------------- | --------------------------------- |
-| `pnpm dev`        | 開発サーバ                        |
-| `pnpm build`      | 本番ビルド                        |
-| `pnpm test`       | 単体テスト(Vitest)                |
-| `pnpm test:e2e`   | e2e テスト(Playwright)            |
-| `pnpm lint`       | ESLint                            |
-| `pnpm type-check` | 型チェック(tsc)                   |
-| `pnpm format`     | Prettier チェック                 |
-| `pnpm demo`       | ビルド → 実機テスト用トンネル公開 |
+| コマンド             | 用途                                   |
+| -------------------- | -------------------------------------- |
+| `pnpm dev`           | 開発サーバ                             |
+| `pnpm build`         | 本番ビルド                             |
+| `pnpm test`          | 単体テスト(Vitest)                     |
+| `pnpm test:e2e`      | e2e テスト(Playwright)                 |
+| `pnpm lint`          | ESLint                                 |
+| `pnpm type-check`    | 型チェック(tsc)                        |
+| `pnpm format`        | Prettier チェック                      |
+| `pnpm demo`          | ビルド → 実機テスト用トンネル公開      |
+| `pnpm run deploy:cf` | ビルド → Cloudflare Workers へデプロイ |
 
 ## 実機テスト(スマホ・複数台)
 
@@ -42,6 +47,18 @@ pnpm demo   # = pnpm build && bash scripts/serve-tunnel.sh
 表示される `https://<ランダム>.trycloudflare.com` を複数台のスマホで開き、各自 3 文字名を入力・
 マイクを許可 → 端末を近づけて FT8 交信を試す(スピーカー音を相手のマイクが拾ってデコードする)。
 `cloudflared` が必要(https://github.com/cloudflare/cloudflared)。
+
+## デプロイ
+
+Cloudflare Workers の Static Assets で配信(Pages ではなく Workers)。エッジ配信なので `Date`
+ヘッダがエッジ(NTP同期)時刻になり、時刻補正に好都合。設定は [wrangler.jsonc](wrangler.jsonc)。
+
+```sh
+pnpm run deploy:cf          # = vite build && wrangler deploy
+```
+
+独自ドメイン `ft8.numa08.dev` は `custom_domain` ルートで DNS + 証明書を自動プロビジョニング。
+デプロイ先アカウントは `wrangler whoami` で確認(個人アカウントにログインしておくこと)。
 
 ## FT8 WASM の再生成
 
