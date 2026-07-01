@@ -3,6 +3,9 @@
 ブラウザだけで動く FT8 名刺交換デモ(WSJT-X 簡易版)。スマホのマイクとスピーカーで、3 文字ハンドルネームを
 FT8 の音として送受信して交換する。
 
+> **これはスピーカー ↔ マイク間の「音声」デモです。** 無線(RF)での電波送信は一切行わないため、
+> アマチュア無線の免許は不要です。
+
 - 公開URL: **https://ft8.numa08.dev**
 - 仕様: [docs/SPEC.md](docs/SPEC.md) / 受入テスト設計: [docs/ACCEPTANCE_TESTS.md](docs/ACCEPTANCE_TESTS.md)
 
@@ -60,6 +63,9 @@ pnpm run deploy:cf          # = vite build && wrangler deploy
 独自ドメイン `ft8.numa08.dev` は `custom_domain` ルートで DNS + 証明書を自動プロビジョニング。
 デプロイ先アカウントは `wrangler whoami` で確認(個人アカウントにログインしておくこと)。
 
+フォークして自分でデプロイする場合は [wrangler.jsonc](wrangler.jsonc) の `name` と `routes`
+(`ft8.numa08.dev`)を自分の Worker 名・ドメインに書き換えること。
+
 ## FT8 WASM の再生成
 
 `src/audio/wasm/ft8.{mjs,wasm}` は ft8_lib(MIT)を Emscripten で WASM 化した生成物。
@@ -87,3 +93,11 @@ test/
   e2e/       Playwright(AC-24 ほか)
   fixtures/  AC-11 用ゴールデン音声
 ```
+
+## ライセンス
+
+本プロジェクトは [MIT License](LICENSE)(© 2026 numa08 (JK1TUT))で公開しています。
+
+FT8 のエンコード・デコード中核は [ft8_lib](https://github.com/kgoba/ft8_lib)
+(© 2018 Kārlis Goba, MIT)由来です。同梱している WASM バイナリおよび派生した C シムの
+著作権・ライセンス表示は [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) を参照してください。

@@ -1,6 +1,9 @@
 // テキスト(フリーテキスト)を 15 秒スロットの float PCM にエンコードする WASM シム。
 // パイプラインは ft8_lib の demo/gen_ft8.c に準拠: encode_free -> ft8_encode(tones) -> synth_gfsk。
 // gfsk_pulse / synth_gfsk は gen_ft8.c から複製(ライブラリ側には無いため)。
+//
+// Portions derived from ft8_lib (https://github.com/kgoba/ft8_lib),
+// Copyright (c) 2018 Kārlis Goba, MIT License. See THIRD_PARTY_LICENSES.md.
 #include <stdint.h>
 #include <string.h>
 #include <math.h>

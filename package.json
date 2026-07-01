@@ -1,7 +1,7 @@
 {
   "name": "ft8-demo-on-web",
   "version": "1.0.0",
-  "description": "",
+  "description": "ブラウザだけで動く FT8 名刺交換デモ(スマホのマイク・スピーカーで交信)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -18,8 +18,8 @@
     "deploy:cf": "vite build && wrangler deploy"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "numa08 (JK1TUT)",
+  "license": "MIT",
   "devEngines": {
     "packageManager": {
       "name": "pnpm",

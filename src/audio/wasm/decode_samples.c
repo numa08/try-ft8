@@ -1,6 +1,9 @@
 // T1 spike: decode FT8 from an in-memory PCM buffer (for browser/WASM use).
 // Reuses ft8_lib's public decode API + a callsign hashtable copied from the
 // demo (demo/decode_ft8.c). Output: newline-separated decoded message texts.
+//
+// Portions derived from ft8_lib (https://github.com/kgoba/ft8_lib),
+// Copyright (c) 2018 Kārlis Goba, MIT License. See THIRD_PARTY_LICENSES.md.
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
