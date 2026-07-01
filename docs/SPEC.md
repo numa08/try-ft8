@@ -178,7 +178,7 @@ FT8 のフリーテキストは 13 文字上限・大文字英数字とスペー
 > SPEC 確定・受入テスト凍結後に実行する。仕様本文は貼らず短い条件文にする。
 
 ```
-/goal SPEC.md の全受入基準(AC-1〜AC-32)に対応するテストが npm test で exit 0、
+/goal SPEC.md の全受入基準(AC-1〜AC-32)に対応するテストが pnpm test で exit 0、
 lint・型チェックがクリーン、Playwright で AC-24 の起動〜メイン画面描画が通ること。
 SPEC.md と test/ 以外の既存テストは変更しない。Non-Goals に記載の項目には着手しない。
 ```
