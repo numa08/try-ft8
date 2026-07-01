@@ -504,6 +504,25 @@ export function createApp(
     slotRemainEl.textContent = `${freq} · ${remain}s`
   }
 
+  function renderFooter(): HTMLElement {
+    // OSS デモなのでソースへの導線をフッターに常設する。
+    const link = h('a', {
+      className: 'footer-link mono',
+      textContent: 'GitHub',
+      attrs: {
+        href: 'https://github.com/numa08/try-ft8',
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      },
+    })
+    return h(
+      'div',
+      { className: 'footer' },
+      h('span', { className: 'footer-text mono', textContent: 'MIT · numa08 (JK1TUT)' }),
+      link,
+    )
+  }
+
   function renderApp(): void {
     const app = h(
       'div',
@@ -513,6 +532,7 @@ export function createApp(
       renderAction(),
       renderTabs(),
       renderList(),
+      renderFooter(),
     )
     if (denied) {
       app.append(renderDeniedOverlay())

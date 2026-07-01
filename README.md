@@ -49,7 +49,7 @@ pnpm demo   # = pnpm build && bash scripts/serve-tunnel.sh
 
 表示される `https://<ランダム>.trycloudflare.com` を複数台のスマホで開き、各自 3 文字名を入力・
 マイクを許可 → 端末を近づけて FT8 交信を試す(スピーカー音を相手のマイクが拾ってデコードする)。
-`cloudflared` が必要(https://github.com/cloudflare/cloudflared)。
+`cloudflared` が必要( https://github.com/cloudflare/cloudflared )。
 
 ## デプロイ
 
