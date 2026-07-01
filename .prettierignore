@@ -1,0 +1,9 @@
+dist
+node_modules
+# SPEC は凍結ドキュメントのため整形対象外
+docs/SPEC.md
+pnpm-lock.yaml
+playwright-report
+test-results
+coverage
+public
