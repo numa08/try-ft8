@@ -14,6 +14,7 @@ import { createClock } from '../domain/clock'
 import { createSlotScheduler } from './slotScheduler'
 import type { SlotScheduler } from './slotScheduler'
 import { syncClock } from './timeSync'
+import { getLang, initLang, setLang, t } from '../i18n'
 
 const ACCENT = '#2fe6a8'
 const BLUE = '#5aa8ff'
@@ -55,6 +56,11 @@ function h<K extends keyof HTMLElementTagNameMap>(
 
 function pad2(value: number): string {
   return String(value).padStart(2, '0')
+}
+
+// 日本語のときだけ和文向けフォントスタック(.jp)を付与する。英語は既定フォント。
+function jpClass(): string {
+  return getLang() === 'ja' ? ' jp' : ''
 }
 
 function clockNow(): string {
@@ -112,19 +118,20 @@ export function createApp(
   function statusView(): StatusView {
     const kind = machine?.state.kind ?? 'idle'
     const peer = machine?.state.peer ?? ''
+    const m = t()
     switch (kind) {
       case 'cq_calling':
-        return { label: 'CALLING CQ', sub: 'CQ 送出 · 応答待ち', color: ACCENT, role: 'TX' }
+        return { label: 'CALLING CQ', sub: m.subCqCalling, color: ACCENT, role: 'TX' }
       case 'cq_answering':
-        return { label: 'IN QSO', sub: `${peer} と交信中 · 73 送信`, color: ACCENT, role: 'TX' }
+        return { label: 'IN QSO', sub: m.subCqAnswering(peer), color: ACCENT, role: 'TX' }
       case 'resp_replying':
-        return { label: 'IN QSO', sub: `${peer} へ応答中`, color: ACCENT, role: 'TX' }
+        return { label: 'IN QSO', sub: m.subRespReplying(peer), color: ACCENT, role: 'TX' }
       case 'resp_finishing':
-        return { label: 'IN QSO', sub: `${peer} へ 73 送信`, color: ACCENT, role: 'TX' }
+        return { label: 'IN QSO', sub: m.subRespFinishing(peer), color: ACCENT, role: 'TX' }
       case 'done':
-        return { label: 'QSO COMPLETE', sub: `${peer} と交信成立`, color: ACCENT, role: 'RX' }
+        return { label: 'QSO COMPLETE', sub: m.subDone(peer), color: ACCENT, role: 'RX' }
       default:
-        return { label: 'MONITORING', sub: 'CQ を受信待ち…', color: BLUE, role: 'RX' }
+        return { label: 'MONITORING', sub: m.subMonitoring, color: BLUE, role: 'RX' }
     }
   }
 
@@ -135,10 +142,10 @@ export function createApp(
         void engine.transmit(action.text, offsetHz)
       } else if (action.type === 'completed') {
         // AC-21: 交信成立で相手をログに保存。
-        pushActivity('sys', `QSO 成立 · ${action.peer}`)
+        pushActivity('sys', t().sysQsoComplete(action.peer))
         store.add({ name: action.peer, at: Date.now() })
       } else if (action.type === 'waiting') {
-        pushActivity('sys', '応答なし · 待機')
+        pushActivity('sys', t().sysNoAnswer)
       }
     }
   }
@@ -161,7 +168,7 @@ export function createApp(
 
   function onCallCQ(): void {
     if (!machine) return
-    pushActivity('sys', 'CQ を送信します…') // AC-12
+    pushActivity('sys', t().sysSendingCq) // AC-12
     applyActions(machine.dispatch({ type: 'start_sequence' }))
     renderApp()
   }
@@ -173,11 +180,11 @@ export function createApp(
 
   function formatOffset(): string {
     if (!clock.synced) {
-      return '時刻補正 未同期'
+      return t().offsetUnsynced
     }
     const seconds = clock.offsetMs() / 1000
     const sign = seconds >= 0 ? '+' : '−'
-    return `時刻補正 ${sign}${Math.abs(seconds).toFixed(2)}s`
+    return t().offset(sign, Math.abs(seconds).toFixed(2))
   }
 
   function openSetup(): void {
@@ -190,7 +197,7 @@ export function createApp(
   async function onStart(): Promise<void> {
     const result = validateName(setupValue) // AC-2 / AC-6
     if (!result.ok) {
-      setupError = result.reason
+      setupError = t().nameError
       renderApp()
       return
     }
@@ -227,7 +234,7 @@ export function createApp(
   function renderHeader(): HTMLElement {
     const pill = h(
       'button',
-      { className: 'handle-pill', attrs: { 'aria-label': '名前を変更' } },
+      { className: 'handle-pill', attrs: { 'aria-label': t().changeName } },
       h('span', { className: 'tag mono', textContent: 'DEMO' }),
       h('span', { className: 'sep' }),
       h('span', { className: 'val mono', textContent: name || '—' }),
@@ -338,9 +345,7 @@ export function createApp(
 
   function renderMonitor(): HTMLElement[] {
     if (activity.length === 0) {
-      return [
-        h('div', { className: 'list-empty', textContent: 'バンドを受信中… まだ信号はありません' }),
-      ]
+      return [h('div', { className: 'list-empty', textContent: t().monitorEmpty })]
     }
     return activity.map((entry) => {
       const tag = entry.dir === 'tx' ? 'TX' : entry.dir === 'rx' ? 'RX' : '·'
@@ -371,7 +376,7 @@ export function createApp(
 
     const entries = store.list() // AC-22
     if (entries.length === 0) {
-      return [head, h('div', { className: 'list-empty', textContent: 'まだ交信はありません' })]
+      return [head, h('div', { className: 'list-empty', textContent: t().logbookEmpty })]
     }
     const cards = entries.map((entry) =>
       h(
@@ -401,18 +406,19 @@ export function createApp(
   }
 
   function renderSetupOverlay(): HTMLElement {
+    const m = t()
     const input = h('input', {
       className: 'setup-input',
       type: 'text',
       value: setupValue,
       // 3 文字超の入力も検証で理由表示するため、入力自体は少し余裕を持たせる(AC-2)。
       maxLength: 6,
-      placeholder: '例: ABC',
+      placeholder: m.namePlaceholder,
       autocapitalize: 'characters',
       autocomplete: 'off',
       spellcheck: false,
       dataset: { testid: 'name-input' },
-      attrs: { 'aria-label': '名前(3文字)' },
+      attrs: { 'aria-label': m.nameAria },
     })
     input.oninput = () => {
       const normalized = normalizeName(input.value)
@@ -432,22 +438,17 @@ export function createApp(
 
     const start = h('button', {
       className: 'start-btn',
-      textContent: '開始',
+      textContent: m.startBtn,
       dataset: { testid: 'start-button' },
     })
     start.onclick = () => void onStart()
 
-    // AC-1: マイク収録 / スピーカー / 保存・送信しない の注意文。
-    const notices: string[] = [
-      '本アプリは微弱電波の通信方式「FT8」を音で体験するデモです。',
-      'マイクの使用許可を求めます(音声は端末内でのデコードにのみ使用します)。',
-      'スピーカーから音が鳴ります。音量と周囲の環境に注意してください。',
-      '収録した音声は保存も送信もしません。',
-    ]
+    // AC-1: マイク収録 / スピーカー / 保存・送信しない の注意文。末尾に遊び方の案内を添える。
+    const notices: string[] = [...m.notices, m.playGuide]
     const notice = h(
       'div',
-      { className: 'notice jp' },
-      h('div', { className: 'notice-title', textContent: 'ご利用にあたって' }),
+      { className: 'notice' + jpClass() },
+      h('div', { className: 'notice-title', textContent: m.noticeTitle }),
       ...notices.map((text) =>
         h(
           'div',
@@ -462,11 +463,8 @@ export function createApp(
       'div',
       { className: 'setup', dataset: { testid: 'name-dialog' }, attrs: { role: 'dialog' } },
       h('div', { className: 'setup-kicker mono', textContent: 'FT8 · ACOUSTIC LINK' }),
-      h('div', { className: 'setup-title jp', textContent: 'ハンドルネームを設定' }),
-      h('div', {
-        className: 'setup-desc jp',
-        textContent: 'A〜Z / 0〜9 でちょうど 3 文字。交信時に相手へ表示されます。',
-      }),
+      h('div', { className: 'setup-title' + jpClass(), textContent: m.setupTitle }),
+      h('div', { className: 'setup-desc' + jpClass(), textContent: m.setupDesc }),
       input,
       error,
       notice,
@@ -478,9 +476,9 @@ export function createApp(
   function renderDeniedOverlay(): HTMLElement {
     const card = h(
       'div',
-      { className: 'setup jp', dataset: { testid: 'denied-dialog' } },
+      { className: 'setup' + jpClass(), dataset: { testid: 'denied-dialog' } },
       h('div', { className: 'setup-kicker mono', textContent: 'FT8 · ACOUSTIC LINK' }),
-      h('div', { className: 'setup-title', textContent: '送受信できません' }),
+      h('div', { className: 'setup-title', textContent: t().deniedTitle }),
       h('div', {
         className: 'setup-desc',
         textContent: deniedReason,
@@ -488,7 +486,7 @@ export function createApp(
       }),
       h('div', {
         className: 'setup-desc',
-        textContent: 'マイクを許可するには、ページを再読み込みして再試行してください。',
+        textContent: t().deniedHelp,
       }),
     )
     return h('div', { className: 'overlay' }, card)
@@ -515,11 +513,21 @@ export function createApp(
         rel: 'noopener noreferrer',
       },
     })
+    // 日本語 ⇄ 英語のトグル。ボタン文言は「切り替え先」の言語名を示す。
+    const langBtn = h('button', {
+      className: 'lang-toggle mono',
+      textContent: t().langToggle,
+      attrs: { 'aria-label': 'Switch language', 'data-testid': 'lang-toggle' },
+    })
+    langBtn.onclick = () => {
+      setLang(getLang() === 'ja' ? 'en' : 'ja')
+      renderApp()
+    }
     return h(
       'div',
       { className: 'footer' },
       h('span', { className: 'footer-text mono', textContent: 'MIT · numa08 (JK1TUT)' }),
-      link,
+      h('div', { className: 'footer-right' }, langBtn, link),
     )
   }
 
@@ -544,6 +552,8 @@ export function createApp(
 
   return {
     mount() {
+      // 保存済み設定またはブラウザ言語から表示言語を決定する。
+      initLang()
       // AC-33: 保存済みの名前があれば復元し、入力の初期値にする。
       const saved = loadHandle()
       if (saved !== null) {

@@ -103,6 +103,12 @@ body {
   color: var(--muted2);
 }
 
+.footer-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .footer-link {
   color: var(--muted);
   text-decoration: none;
@@ -112,6 +118,25 @@ body {
 
 .footer-link:hover {
   color: var(--text);
+}
+
+.lang-toggle {
+  color: var(--muted);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.lang-toggle:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 /* ---- header ---- */

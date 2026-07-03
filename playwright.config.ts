@@ -11,6 +11,8 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // 既定表示言語はブラウザ言語で決まる。既存の受入テストは日本語 UI を前提とするため固定する。
+    locale: 'ja-JP',
   },
   projects: [
     {
